@@ -10,13 +10,17 @@ import {
   ReportStatusBadge,
   getReportSubmissionStatus,
 } from '@/components/ui/inspection-status';
+import { getAssetIcon } from '@/constants/asset-icons';
 import { palette, radius, shadows, spacing, typography } from '@/constants/theme';
-import { currentUser } from '@/data/mock';
+import { assets, currentUser } from '@/data/mock';
 
-type HistoryStatus = 'Good' | 'Minor Damage' | 'Major Damage' | 'Missing';
+type HistoryStatus = 'Good' | 'Minor Damage' | 'Damaged' | 'Missing';
 type AssetType = 'Tools' | 'Vehicle' | 'Laptop' | 'WFM';
-type SortOption = 'Newest' | 'Oldest' | 'Nama Unit';
-type FilterOption = 'All Records' | HistoryStatus | AssetType;
+type SortOption = 'Newest' | 'Oldest' | 'Unit Name';
+type ConditionFilterOption = 'All Conditions' | HistoryStatus;
+type AssetTypeFilterOption = 'All Asset Types' | AssetType;
+type ReportStatusFilterOption = 'All Report Status' | 'Submitted' | 'Not Submitted' | 'Approved';
+type FilterOption = ConditionFilterOption | AssetTypeFilterOption | ReportStatusFilterOption;
 
 type HistoryRecord = {
   id: string;
@@ -28,14 +32,18 @@ type HistoryRecord = {
   inspector: string;
   status: HistoryStatus;
   assetType: AssetType;
-  icon: keyof typeof MaterialIcons.glyphMap;
-  iconBackground: string;
-  iconColor: string;
+  category: string;
 };
 
-const sortOptions: SortOption[] = ['Newest', 'Oldest', 'Nama Unit'];
-const statusFilterOptions: ('All Records' | HistoryStatus)[] = ['All Records', 'Good', 'Minor Damage', 'Major Damage', 'Missing'];
-const assetTypeFilterOptions: AssetType[] = ['Tools', 'Vehicle', 'Laptop', 'WFM'];
+const sortOptions: SortOption[] = ['Newest', 'Oldest', 'Unit Name'];
+const statusFilterOptions: ConditionFilterOption[] = ['All Conditions', 'Good', 'Minor Damage', 'Damaged', 'Missing'];
+const assetTypeFilterOptions: AssetTypeFilterOption[] = ['All Asset Types', 'Tools', 'Vehicle', 'Laptop', 'WFM'];
+const reportStatusFilterOptions: ReportStatusFilterOption[] = [
+  'All Report Status',
+  'Submitted',
+  'Not Submitted',
+  'Approved',
+];
 const listCardMinHeight = 124;
 
 const historyRecords: HistoryRecord[] = [
@@ -47,11 +55,9 @@ const historyRecords: HistoryRecord[] = [
     inspectedAt: '14 May 2026, 09:21',
     timestamp: new Date('2026-05-14T09:21:00').getTime(),
     inspector: currentUser.fullName,
-    status: 'Major Damage',
+    status: 'Damaged',
     assetType: 'Tools',
-    icon: 'cable',
-    iconBackground: palette.dangerSoft,
-    iconColor: palette.danger,
+    category: 'OTDR',
   },
   {
     id: 'AST-SPL-0091',
@@ -63,9 +69,7 @@ const historyRecords: HistoryRecord[] = [
     inspector: currentUser.fullName,
     status: 'Good',
     assetType: 'Tools',
-    icon: 'precision-manufacturing',
-    iconBackground: palette.primary,
-    iconColor: palette.surface,
+    category: 'Splicer',
   },
   {
     id: 'DK-3015-BN',
@@ -77,13 +81,11 @@ const historyRecords: HistoryRecord[] = [
     inspector: currentUser.fullName,
     status: 'Minor Damage',
     assetType: 'Vehicle',
-    icon: 'directions-car',
-    iconBackground: '#D7CDBD',
-    iconColor: '#6B4B18',
+    category: 'Daihatsu Grandmax',
   },
   {
     id: 'AST-PWR-0302',
-    assetName: 'Togo Biznet Power Unit',
+    assetName: 'Biznet Power Unit',
     assetCode: '#AST-PWR-0302',
     location: 'Warehouse Power Shelf',
     inspectedAt: '10 May 2026, 10:30',
@@ -91,9 +93,7 @@ const historyRecords: HistoryRecord[] = [
     inspector: currentUser.fullName,
     status: 'Good',
     assetType: 'Tools',
-    icon: 'electrical-services',
-    iconBackground: palette.primary,
-    iconColor: palette.surface,
+    category: 'Biznet Power',
   },
   {
     id: 'LTP-MAC-1301',
@@ -105,31 +105,33 @@ const historyRecords: HistoryRecord[] = [
     inspector: currentUser.fullName,
     status: 'Missing',
     assetType: 'Laptop',
-    icon: 'laptop-mac',
-    iconBackground: palette.dangerSoft,
-    iconColor: palette.danger,
+    category: 'Laptop',
   },
   {
-    id: 'WFM-RTR-0415',
-    assetName: 'WFM Mobile Router',
-    assetCode: '#WFM-RTR-0415',
+    id: 'NOE3-WFM-DPS-0003',
+    assetName: 'Honeywell Barcode Scanner 003',
+    assetCode: '#NOE3-WFM-DPS-0003',
     location: 'Network Operation Desk',
     inspectedAt: '12 May 2026, 11:15',
     timestamp: new Date('2026-05-12T11:15:00').getTime(),
     inspector: currentUser.fullName,
-    status: 'Major Damage',
+    status: 'Damaged',
     assetType: 'WFM',
-    icon: 'support-agent',
-    iconBackground: palette.dangerSoft,
-    iconColor: palette.danger,
+    category: 'WFM',
   },
 ];
 
 export default function HistoryScreen() {
   const [query, setQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('Newest');
-  const [filterBy, setFilterBy] = useState<FilterOption>('All Records');
+  const [conditionFilter, setConditionFilter] = useState<ConditionFilterOption>('All Conditions');
+  const [assetTypeFilter, setAssetTypeFilter] = useState<AssetTypeFilterOption>('All Asset Types');
+  const [reportStatusFilter, setReportStatusFilter] = useState<ReportStatusFilterOption>('All Report Status');
   const [activeSheet, setActiveSheet] = useState<'sort' | 'filter' | null>(null);
+  const hasActiveFilter =
+    conditionFilter !== 'All Conditions' ||
+    assetTypeFilter !== 'All Asset Types' ||
+    reportStatusFilter !== 'All Report Status';
 
   const filteredRecords = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -144,10 +146,13 @@ export default function HistoryScreen() {
           record.status,
           record.assetType,
         ].some((value) => value.toLowerCase().includes(normalizedQuery));
-      const matchesFilter =
-        filterBy === 'All Records' || record.status === filterBy || record.assetType === filterBy;
+      const reportStatus = getReportSubmissionStatus(record.status);
+      const matchesCondition = conditionFilter === 'All Conditions' || record.status === conditionFilter;
+      const matchesAssetType = assetTypeFilter === 'All Asset Types' || record.assetType === assetTypeFilter;
+      const matchesReportStatus =
+        reportStatusFilter === 'All Report Status' || reportStatus === reportStatusFilter;
 
-      return matchesSearch && matchesFilter;
+      return matchesSearch && matchesCondition && matchesAssetType && matchesReportStatus;
     });
 
     return records.sort((first, second) => {
@@ -155,13 +160,13 @@ export default function HistoryScreen() {
         return first.timestamp - second.timestamp;
       }
 
-      if (sortBy === 'Nama Unit') {
+      if (sortBy === 'Unit Name') {
         return first.assetName.localeCompare(second.assetName);
       }
 
       return second.timestamp - first.timestamp;
     });
-  }, [filterBy, query, sortBy]);
+  }, [assetTypeFilter, conditionFilter, query, reportStatusFilter, sortBy]);
 
   return (
     <AppScreen scroll={false}>
@@ -200,13 +205,13 @@ export default function HistoryScreen() {
               onPress={() => setActiveSheet('filter')}
               style={({ pressed }) => [
                 styles.iconControl,
-                filterBy !== 'All Records' && styles.iconControlActive,
+                hasActiveFilter && styles.iconControlActive,
                 pressed && styles.pressed,
               ]}>
               <MaterialIcons
                 name="tune"
                 size={22}
-                color={filterBy === 'All Records' ? palette.primary : palette.surface}
+                color={hasActiveFilter ? palette.surface : palette.primary}
               />
             </Pressable>
           </View>
@@ -236,12 +241,13 @@ export default function HistoryScreen() {
       />
 
       <FilterBottomSheet
-        activeFilter={filterBy}
+        activeAssetType={assetTypeFilter}
+        activeCondition={conditionFilter}
+        activeReportStatus={reportStatusFilter}
         onClose={() => setActiveSheet(null)}
-        onSelect={(option) => {
-          setFilterBy(option);
-          setActiveSheet(null);
-        }}
+        onSelectAssetType={setAssetTypeFilter}
+        onSelectCondition={setConditionFilter}
+        onSelectReportStatus={setReportStatusFilter}
         visible={activeSheet === 'filter'}
       />
     </AppScreen>
@@ -250,15 +256,16 @@ export default function HistoryScreen() {
 
 function HistoryCard({ record }: { record: HistoryRecord }) {
   const reportStatus = getReportSubmissionStatus(record.status);
+  const assetId = getHistoryRecordAssetId(record);
 
   return (
     <Pressable
       accessibilityRole="button"
-      onPress={() => router.push('/inspection-detail')}
+      onPress={() => router.push({ pathname: '/inspection-detail', params: { assetId } })}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
       <View style={styles.cardTop}>
-        <View style={[styles.assetIconBox, { backgroundColor: record.iconBackground }]}>
-          <MaterialIcons name={record.icon} size={22} color={record.iconColor} />
+        <View style={styles.assetIconBox}>
+          <MaterialIcons name={getAssetIcon(record.category)} size={22} color={palette.primary} />
         </View>
 
         <View style={styles.titleGroup}>
@@ -336,33 +343,47 @@ function SortBottomSheet({
 }
 
 function FilterBottomSheet({
-  activeFilter,
+  activeAssetType,
+  activeCondition,
+  activeReportStatus,
   onClose,
-  onSelect,
+  onSelectAssetType,
+  onSelectCondition,
+  onSelectReportStatus,
   visible,
 }: {
-  activeFilter: FilterOption;
+  activeAssetType: AssetTypeFilterOption;
+  activeCondition: ConditionFilterOption;
+  activeReportStatus: ReportStatusFilterOption;
   onClose: () => void;
-  onSelect: (option: FilterOption) => void;
+  onSelectAssetType: (option: AssetTypeFilterOption) => void;
+  onSelectCondition: (option: ConditionFilterOption) => void;
+  onSelectReportStatus: (option: ReportStatusFilterOption) => void;
   visible: boolean;
 }) {
   return (
     <BottomSheet onClose={onClose} title="Filter Records" visible={visible}>
-      <FilterSection activeFilter={activeFilter} onSelect={onSelect} options={statusFilterOptions} title="Condition" />
-      <FilterSection activeFilter={activeFilter} onSelect={onSelect} options={assetTypeFilterOptions} title="Asset Type" />
+      <FilterSection activeFilter={activeCondition} onSelect={onSelectCondition} options={statusFilterOptions} title="Condition" />
+      <FilterSection activeFilter={activeAssetType} onSelect={onSelectAssetType} options={assetTypeFilterOptions} title="Asset Type" />
+      <FilterSection
+        activeFilter={activeReportStatus}
+        onSelect={onSelectReportStatus}
+        options={reportStatusFilterOptions}
+        title="Report Status"
+      />
     </BottomSheet>
   );
 }
 
-function FilterSection({
+function FilterSection<T extends FilterOption>({
   activeFilter,
   onSelect,
   options,
   title,
 }: {
-  activeFilter: FilterOption;
-  onSelect: (option: FilterOption) => void;
-  options: readonly FilterOption[];
+  activeFilter: T;
+  onSelect: (option: T) => void;
+  options: readonly T[];
   title: string;
 }) {
   return (
@@ -411,23 +432,33 @@ function BottomSheet({
               <MaterialIcons name="close" size={20} color={palette.textMuted} />
             </Pressable>
           </View>
-          {children}
+          <ScrollView
+            bounces={false}
+            contentContainerStyle={styles.sheetScrollContent}
+            showsVerticalScrollIndicator={false}>
+            {children}
+          </ScrollView>
         </View>
       </View>
     </Modal>
   );
 }
 
+function getHistoryRecordAssetId(record: HistoryRecord) {
+  const code = record.assetCode.replace(/^#/, '');
+  return assets.find((asset) => asset.code === code)?.id ?? record.id;
+}
+
 function getSortCaption(option: SortOption) {
   if (option === 'Oldest') {
-    return 'Show earliest inspections first';
+    return 'Date ascending: oldest inspections first.';
   }
 
-  if (option === 'Nama Unit') {
-    return 'Urutkan riwayat berdasarkan nama unit aset';
+  if (option === 'Unit Name') {
+    return 'Name ascending: A to Z by asset unit.';
   }
 
-  return 'Show latest inspections first';
+  return 'Date descending: newest inspections first.';
 }
 
 const styles = StyleSheet.create({
@@ -438,6 +469,7 @@ const styles = StyleSheet.create({
   },
   assetIconBox: {
     alignItems: 'center',
+    backgroundColor: palette.infoSoft,
     borderRadius: radius.md,
     height: 38,
     justifyContent: 'center',
@@ -685,6 +717,10 @@ const styles = StyleSheet.create({
   sheetOptionList: {
     gap: spacing.sm,
   },
+  sheetScrollContent: {
+    gap: spacing.md,
+    paddingBottom: spacing.sm,
+  },
   sheetPill: {
     alignItems: 'center',
     backgroundColor: '#F8FAF9',
@@ -781,10 +817,10 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     gap: spacing.md,
-    paddingBottom: spacing.md,
+    paddingBottom: 0,
   },
   stickyControls: {
-    backgroundColor: palette.background,
+    backgroundColor: 'rgba(248, 250, 249, 0.72)',
     paddingBottom: spacing.xs,
     zIndex: 10,
   },

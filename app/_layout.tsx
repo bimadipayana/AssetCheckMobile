@@ -1,9 +1,14 @@
 import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import * as SplashScreen from 'expo-splash-screen';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect, useState } from 'react';
 import 'react-native-reanimated';
 
+import { AppSplashScreen } from '@/components/app-splash-screen';
 import { palette } from '@/constants/theme';
+
+void SplashScreen.preventAutoHideAsync();
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -22,6 +27,12 @@ const navigationTheme = {
 };
 
 export default function RootLayout() {
+  const [showSplash, setShowSplash] = useState(true);
+
+  useEffect(() => {
+    void SplashScreen.hideAsync();
+  }, []);
+
   return (
     <ThemeProvider value={navigationTheme}>
       <Stack
@@ -39,7 +50,8 @@ export default function RootLayout() {
         <Stack.Screen name="photo-upload" options={{ title: 'Photo Evidence' }} />
         <Stack.Screen name="inspection-detail" options={{ headerShown: false }} />
       </Stack>
-      <StatusBar style="dark" />
+      {showSplash ? <AppSplashScreen onFinish={() => setShowSplash(false)} /> : null}
+      <StatusBar hidden={showSplash} style="dark" />
     </ThemeProvider>
   );
 }

@@ -8,7 +8,7 @@ import { AppScreen } from '@/components/app-screen';
 import { assets, currentUser } from '@/data/mock';
 import { palette, radius, shadows, spacing, typography } from '@/constants/theme';
 
-const conditions = ['Good', 'Minor Damage', 'Major Damage', 'Missing'];
+const conditions = ['Good', 'Minor Damage', 'Damaged', 'Missing'];
 const inspectionDate = '14 May 2026';
 const currentLocation = {
   address: 'Biznet Branch Badung Nusa Dua',
@@ -26,7 +26,7 @@ type DetectedLocation = {
 };
 
 export default function InspectionFormScreen() {
-  const { assetId } = useLocalSearchParams<{ assetId?: string }>();
+  const { assetId, photoComplete } = useLocalSearchParams<{ assetId?: string; photoComplete?: string }>();
   const asset = assets.find((item) => item.id === assetId) ?? assets[0];
   const [selectedCondition, setSelectedCondition] = useState('');
   const [notes, setNotes] = useState('');
@@ -83,12 +83,19 @@ export default function InspectionFormScreen() {
 
   const displayedLocation = detectedLocation ?? currentLocation;
   const googleMapsUrl = getGoogleMapsUrl(displayedLocation.latitude, displayedLocation.longitude);
+  const requiresPhoto = selectedCondition !== '' && selectedCondition !== 'Good';
+  const hasRequiredPhoto = photoComplete === 'true';
   const handleSaveDraft = () => {
     Alert.alert('Draft Saved', 'Inspection draft is ready to sync when backend storage is connected.');
   };
   const handleSubmit = () => {
     if (!selectedCondition) {
       Alert.alert('Condition Required', 'Please select the asset condition before submitting the inspection.');
+      return;
+    }
+
+    if (requiresPhoto && !hasRequiredPhoto) {
+      Alert.alert('Photo Evidence Required', 'Minor Damage, Damaged, and Missing inspections require completed photo evidence.');
       return;
     }
 
@@ -135,7 +142,7 @@ export default function InspectionFormScreen() {
               <View style={styles.assetCopy}>
                 <Text style={styles.assetNumber}>{asset.code}</Text>
                 <Text style={styles.assetDescription}>{asset.name}</Text>
-                <Text style={styles.assetTypeSerial}>{asset.category} - SN {asset.serialNumber}</Text>
+                <Text style={styles.assetTypeSerial}>{asset.category} - {asset.assetType} - SN {asset.serialNumber}</Text>
                 <Text style={styles.assetBranch}>{asset.branch}</Text>
               </View>
             </View>
@@ -200,8 +207,10 @@ export default function InspectionFormScreen() {
             <MaterialIcons name="attachment" size={22} color={palette.primary} />
           </View>
           <View style={styles.photoCopy}>
-            <Text style={styles.photoTitle}>Add Photo Evidence</Text>
-            <Text style={styles.photoText}>Attach visual proof for this asset inspection</Text>
+          <Text style={styles.photoTitle}>{hasRequiredPhoto ? 'Photo Evidence Completed' : 'Add Photo Evidence'}</Text>
+            <Text style={styles.photoText}>
+              {requiresPhoto ? 'Required for Minor Damage, Damaged, and Missing' : 'Required only when the asset has an issue'}
+            </Text>
           </View>
           <MaterialIcons name="chevron-right" size={22} color={palette.textSubtle} />
         </Pressable>

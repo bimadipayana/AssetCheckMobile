@@ -3,12 +3,14 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen } from '@/components/app-screen';
+import { assetTypeIcons } from '@/constants/asset-icons';
+import { getStatusTone } from '@/constants/status';
 import { palette, radius, shadows, spacing, typography } from '@/constants/theme';
 
 type AssetType = 'Tools' | 'Vehicle' | 'Laptop' | 'WFM';
-type SubCategory = 'Splicer' | 'OTDR' | 'Togo Power' | 'Mobil Grandmax' | 'Motor Honda Revo';
+type SubCategory = 'Splicer' | 'OTDR' | 'Biznet Power' | 'Daihatsu Grandmax' | 'Honda Revo' | 'Honeywell Barcode';
 type InspectionStatus = 'Checked' | 'Pending' | 'Missing';
-type AssetCondition = 'Good' | 'Minor Damaged' | 'Damaged' | 'Missing';
+type AssetCondition = 'Good' | 'Minor Damage' | 'Damaged' | 'Missing';
 type AssetRow = {
   code: string;
   condition: AssetCondition | null;
@@ -30,63 +32,60 @@ const userName = 'Akmal Jeddi';
 const userBranch = 'Badung Nusa Dua';
 const profitCenter = '2705';
 
-const assetTypeIcons: Record<AssetType, keyof typeof MaterialIcons.glyphMap> = {
-  Laptop: 'laptop-mac',
-  Tools: 'construction',
-  Vehicle: 'directions-car',
-  WFM: 'support-agent',
-};
-
 const subCategories: Partial<Record<AssetType, { label: SubCategory; icon: keyof typeof MaterialIcons.glyphMap }[]>> = {
   Tools: [
     { label: 'Splicer', icon: 'precision-manufacturing' },
     { label: 'OTDR', icon: 'cable' },
-    { label: 'Togo Power', icon: 'electrical-services' },
+    { label: 'Biznet Power', icon: 'electrical-services' },
   ],
   Vehicle: [
-    { label: 'Mobil Grandmax', icon: 'local-shipping' },
-    { label: 'Motor Honda Revo', icon: 'two-wheeler' },
+    { label: 'Daihatsu Grandmax', icon: 'local-shipping' },
+    { label: 'Honda Revo', icon: 'two-wheeler' },
+  ],
+  WFM: [
+    { label: 'Honeywell Barcode', icon: 'qr-code-scanner' },
   ],
 };
 
 const subCategoryIcons: Record<SubCategory, keyof typeof MaterialIcons.glyphMap> = {
-  'Mobil Grandmax': 'local-shipping',
-  'Motor Honda Revo': 'two-wheeler',
+  'Biznet Power': 'electrical-services',
+  'Daihatsu Grandmax': 'local-shipping',
+  'Honda Revo': 'two-wheeler',
+  'Honeywell Barcode': 'qr-code-scanner',
   OTDR: 'cable',
   Splicer: 'precision-manufacturing',
-  'Togo Power': 'electrical-services',
 };
 
 const assetRows: AssetRow[] = [
   { code: 'AST-SPL-0091', name: 'Fujikura Splicer 90S', type: 'Tools', subCategory: 'Splicer', status: 'Checked', condition: 'Good', lastCheck: '14 May 2026' },
   { code: 'AST-SPL-0140', name: 'Sumitomo Splicer T-72C', type: 'Tools', subCategory: 'Splicer', status: 'Pending', condition: null, lastCheck: '18 Apr 2026' },
   { code: 'AST-SPL-0188', name: 'Fujikura Cleaver CT50', type: 'Tools', subCategory: 'Splicer', status: 'Checked', condition: 'Good', lastCheck: '13 May 2026' },
-  { code: 'AST-SPL-0217', name: 'Fujikura Splicer 88S', type: 'Tools', subCategory: 'Splicer', status: 'Checked', condition: 'Minor Damaged', lastCheck: '12 May 2026' },
+  { code: 'AST-SPL-0217', name: 'Fujikura Splicer 88S', type: 'Tools', subCategory: 'Splicer', status: 'Checked', condition: 'Minor Damage', lastCheck: '12 May 2026' },
   { code: 'AST-OTD-0144', name: 'DEVISER OTDR AE2300', type: 'Tools', subCategory: 'OTDR', status: 'Checked', condition: 'Damaged', lastCheck: '14 May 2026' },
   { code: 'AST-OTD-0201', name: 'Anritsu MT9085', type: 'Tools', subCategory: 'OTDR', status: 'Pending', condition: null, lastCheck: '16 Apr 2026' },
   { code: 'AST-OTD-0265', name: 'Yokogawa AQ7280', type: 'Tools', subCategory: 'OTDR', status: 'Missing', condition: 'Missing', lastCheck: '09 Apr 2026' },
   { code: 'AST-OTD-0298', name: 'EXFO MaxTester 730C', type: 'Tools', subCategory: 'OTDR', status: 'Checked', condition: 'Good', lastCheck: '11 May 2026' },
-  { code: 'AST-PWR-0302', name: 'Togo Biznet Power Unit', type: 'Tools', subCategory: 'Togo Power', status: 'Checked', condition: 'Good', lastCheck: '10 May 2026' },
-  { code: 'AST-PWR-0331', name: 'Togo Backup Power Kit', type: 'Tools', subCategory: 'Togo Power', status: 'Pending', condition: null, lastCheck: '15 Apr 2026' },
-  { code: 'AST-PWR-0348', name: 'Portable Genset 2200W', type: 'Tools', subCategory: 'Togo Power', status: 'Checked', condition: 'Minor Damaged', lastCheck: '13 May 2026' },
-  { code: 'AST-PWR-0360', name: 'Field Power Stabilizer', type: 'Tools', subCategory: 'Togo Power', status: 'Missing', condition: 'Missing', lastCheck: '06 Apr 2026' },
-  { code: 'DK 2705 GA', name: 'Grandmax Operational Unit', type: 'Vehicle', subCategory: 'Mobil Grandmax', status: 'Checked', condition: 'Good', lastCheck: '14 May 2026' },
-  { code: 'DK 1842 BX', name: 'Grandmax Field Support', type: 'Vehicle', subCategory: 'Mobil Grandmax', status: 'Pending', condition: null, lastCheck: '20 Apr 2026' },
-  { code: 'DK 3015 BN', name: 'Grandmax Fiber Support', type: 'Vehicle', subCategory: 'Mobil Grandmax', status: 'Checked', condition: 'Minor Damaged', lastCheck: '12 May 2026' },
-  { code: 'DK 2250 NA', name: 'Grandmax Maintenance Unit', type: 'Vehicle', subCategory: 'Mobil Grandmax', status: 'Checked', condition: 'Good', lastCheck: '11 May 2026' },
-  { code: 'DK 4128 RE', name: 'Honda Revo Technician', type: 'Vehicle', subCategory: 'Motor Honda Revo', status: 'Missing', condition: 'Missing', lastCheck: '08 Apr 2026' },
-  { code: 'DK 2904 RV', name: 'Honda Revo Patrol Unit', type: 'Vehicle', subCategory: 'Motor Honda Revo', status: 'Pending', condition: null, lastCheck: '17 Apr 2026' },
-  { code: 'DK 1187 HR', name: 'Honda Revo Field Unit', type: 'Vehicle', subCategory: 'Motor Honda Revo', status: 'Checked', condition: 'Damaged', lastCheck: '13 May 2026' },
+  { code: 'AST-PWR-0302', name: 'Biznet Power Unit', type: 'Tools', subCategory: 'Biznet Power', status: 'Checked', condition: 'Good', lastCheck: '10 May 2026' },
+  { code: 'AST-PWR-0331', name: 'Biznet Backup Power Kit', type: 'Tools', subCategory: 'Biznet Power', status: 'Pending', condition: null, lastCheck: '15 Apr 2026' },
+  { code: 'AST-PWR-0348', name: 'Portable Genset 2200W', type: 'Tools', subCategory: 'Biznet Power', status: 'Checked', condition: 'Minor Damage', lastCheck: '13 May 2026' },
+  { code: 'AST-PWR-0360', name: 'Field Power Stabilizer', type: 'Tools', subCategory: 'Biznet Power', status: 'Missing', condition: 'Missing', lastCheck: '06 Apr 2026' },
+  { code: 'DK 2705 GA', name: 'Grandmax Operational Unit', type: 'Vehicle', subCategory: 'Daihatsu Grandmax', status: 'Checked', condition: 'Good', lastCheck: '14 May 2026' },
+  { code: 'DK 1842 BX', name: 'Grandmax Field Support', type: 'Vehicle', subCategory: 'Daihatsu Grandmax', status: 'Pending', condition: null, lastCheck: '20 Apr 2026' },
+  { code: 'DK 3015 BN', name: 'Grandmax Fiber Support', type: 'Vehicle', subCategory: 'Daihatsu Grandmax', status: 'Checked', condition: 'Minor Damage', lastCheck: '12 May 2026' },
+  { code: 'DK 2250 NA', name: 'Grandmax Maintenance Unit', type: 'Vehicle', subCategory: 'Daihatsu Grandmax', status: 'Checked', condition: 'Good', lastCheck: '11 May 2026' },
+  { code: 'DK 4128 RE', name: 'Honda Revo Technician', type: 'Vehicle', subCategory: 'Honda Revo', status: 'Missing', condition: 'Missing', lastCheck: '08 Apr 2026' },
+  { code: 'DK 2904 RV', name: 'Honda Revo Patrol Unit', type: 'Vehicle', subCategory: 'Honda Revo', status: 'Pending', condition: null, lastCheck: '17 Apr 2026' },
+  { code: 'DK 1187 HR', name: 'Honda Revo Field Unit', type: 'Vehicle', subCategory: 'Honda Revo', status: 'Checked', condition: 'Damaged', lastCheck: '13 May 2026' },
   { code: 'LTP-THK-1022', name: 'ThinkPad T14 Gen 3', type: 'Laptop', subCategory: null, status: 'Checked', condition: 'Good', lastCheck: '14 May 2026', picLaptop: 'Akmal Jeddi' },
   { code: 'LTP-DEL-1140', name: 'Dell Latitude 5530', type: 'Laptop', subCategory: null, status: 'Pending', condition: null, lastCheck: '19 Apr 2026', picLaptop: 'Michael Chen' },
   { code: 'LTP-HP-1209', name: 'HP EliteBook 840 G8', type: 'Laptop', subCategory: null, status: 'Checked', condition: 'Good', lastCheck: '13 May 2026', picLaptop: 'Sarah Rogers' },
   { code: 'LTP-MAC-1301', name: 'MacBook Pro M1', type: 'Laptop', subCategory: null, status: 'Missing', condition: 'Missing', lastCheck: '07 Apr 2026', picLaptop: 'Aditya Putra' },
-  { code: 'LTP-ASU-1422', name: 'ASUS ExpertBook B9', type: 'Laptop', subCategory: null, status: 'Checked', condition: 'Minor Damaged', lastCheck: '12 May 2026', picLaptop: 'Dian Kurnia' },
+  { code: 'LTP-ASU-1422', name: 'ASUS ExpertBook B9', type: 'Laptop', subCategory: null, status: 'Checked', condition: 'Minor Damage', lastCheck: '12 May 2026', picLaptop: 'Dian Kurnia' },
   { code: 'LTP-LEN-1510', name: 'Lenovo ThinkBook 14', type: 'Laptop', subCategory: null, status: 'Pending', condition: null, lastCheck: '21 Apr 2026', picLaptop: 'Rafi Mahendra' },
-  { code: 'WFM-FLD-0401', name: 'WFM Field Tablet A1', type: 'WFM', subCategory: null, status: 'Checked', condition: 'Good', lastCheck: '14 May 2026' },
-  { code: 'WFM-RDR-0408', name: 'WFM Barcode Reader Kit', type: 'WFM', subCategory: null, status: 'Pending', condition: null, lastCheck: '22 Apr 2026' },
-  { code: 'WFM-RTR-0415', name: 'WFM Mobile Router', type: 'WFM', subCategory: null, status: 'Checked', condition: 'Minor Damaged', lastCheck: '12 May 2026' },
-  { code: 'WFM-HHD-0422', name: 'WFM Handheld Device', type: 'WFM', subCategory: null, status: 'Missing', condition: 'Missing', lastCheck: '05 Apr 2026' },
+  { code: 'NOE3-WFM-DPS-0001', name: 'Honeywell Barcode Scanner 001', type: 'WFM', subCategory: 'Honeywell Barcode', status: 'Checked', condition: 'Good', lastCheck: '14 May 2026' },
+  { code: 'NOE3-WFM-DPS-0002', name: 'Honeywell Barcode Scanner 002', type: 'WFM', subCategory: 'Honeywell Barcode', status: 'Pending', condition: null, lastCheck: '22 Apr 2026' },
+  { code: 'NOE3-WFM-DPS-0003', name: 'Honeywell Barcode Scanner 003', type: 'WFM', subCategory: 'Honeywell Barcode', status: 'Checked', condition: 'Minor Damage', lastCheck: '12 May 2026' },
+  { code: 'NOE3-WFM-DPS-0004', name: 'Honeywell Barcode Scanner 004', type: 'WFM', subCategory: 'Honeywell Barcode', status: 'Missing', condition: 'Missing', lastCheck: '05 Apr 2026' },
 ];
 
 function buildSummary(rows: AssetRow[], icon: keyof typeof MaterialIcons.glyphMap): SummaryData {
@@ -104,7 +103,7 @@ function buildSummary(rows: AssetRow[], icon: keyof typeof MaterialIcons.glyphMa
 
       if (asset.condition === 'Good') {
         summary.condition.good += 1;
-      } else if (asset.condition === 'Minor Damaged') {
+      } else if (asset.condition === 'Minor Damage') {
         summary.condition.minor += 1;
       } else if (asset.condition === 'Damaged') {
         summary.condition.damaged += 1;
@@ -143,13 +142,21 @@ const assetTypeData: Record<AssetType, SummaryData> = {
 };
 
 const subCategoryData: Record<SubCategory, SummaryData> = {
-  'Mobil Grandmax': buildSummary(
-    assetRows.filter((asset) => asset.subCategory === 'Mobil Grandmax'),
-    subCategoryIcons['Mobil Grandmax'],
+  'Biznet Power': buildSummary(
+    assetRows.filter((asset) => asset.subCategory === 'Biznet Power'),
+    subCategoryIcons['Biznet Power'],
   ),
-  'Motor Honda Revo': buildSummary(
-    assetRows.filter((asset) => asset.subCategory === 'Motor Honda Revo'),
-    subCategoryIcons['Motor Honda Revo'],
+  'Daihatsu Grandmax': buildSummary(
+    assetRows.filter((asset) => asset.subCategory === 'Daihatsu Grandmax'),
+    subCategoryIcons['Daihatsu Grandmax'],
+  ),
+  'Honda Revo': buildSummary(
+    assetRows.filter((asset) => asset.subCategory === 'Honda Revo'),
+    subCategoryIcons['Honda Revo'],
+  ),
+  'Honeywell Barcode': buildSummary(
+    assetRows.filter((asset) => asset.subCategory === 'Honeywell Barcode'),
+    subCategoryIcons['Honeywell Barcode'],
   ),
   OTDR: buildSummary(
     assetRows.filter((asset) => asset.subCategory === 'OTDR'),
@@ -158,10 +165,6 @@ const subCategoryData: Record<SubCategory, SummaryData> = {
   Splicer: buildSummary(
     assetRows.filter((asset) => asset.subCategory === 'Splicer'),
     subCategoryIcons.Splicer,
-  ),
-  'Togo Power': buildSummary(
-    assetRows.filter((asset) => asset.subCategory === 'Togo Power'),
-    subCategoryIcons['Togo Power'],
   ),
 };
 
@@ -199,217 +202,199 @@ export default function HomeScreen() {
   }, [filteredAssets.length, pageSize, selectedSubCategory, selectedType]);
 
   const inspectionRows = [
-    { label: 'Checked', value: activeSummary.inspection.checked, icon: 'check-circle' as const, color: palette.primary },
-    { label: 'Pending', value: activeSummary.inspection.pending, icon: 'pending' as const, color: palette.warning },
-    { label: 'Missing', value: activeSummary.inspection.missing, icon: 'highlight-off' as const, color: palette.danger },
+    { label: 'Checked', value: activeSummary.inspection.checked, ...getStatusTone('Checked') },
+    { label: 'Pending', value: activeSummary.inspection.pending, ...getStatusTone('Pending') },
+    { label: 'Missing', value: activeSummary.inspection.missing, ...getStatusTone('Missing') },
   ];
   const conditionRows = [
-    { label: 'Good', value: activeSummary.condition.good, icon: 'thumb-up-off-alt' as const, color: palette.primary },
-    { label: 'Minor Damaged', value: activeSummary.condition.minor, icon: 'build' as const, color: palette.warning },
-    { label: 'Damaged', value: activeSummary.condition.damaged, icon: 'image-not-supported' as const, color: palette.danger },
-    { label: 'Missing', value: activeSummary.condition.missing, icon: 'error-outline' as const, color: palette.danger },
+    { label: 'Good', value: activeSummary.condition.good, ...getStatusTone('Good') },
+    { label: 'Minor Damage', value: activeSummary.condition.minor, ...getStatusTone('Minor Damage') },
+    { label: 'Damaged', value: activeSummary.condition.damaged, ...getStatusTone('Damaged') },
+    { label: 'Missing', value: activeSummary.condition.missing, ...getStatusTone('Missing') },
   ];
 
   return (
-    <AppScreen>
-      <View style={styles.heroSection}>
-        <SectionBackground />
-        <View style={styles.header}>
-          <Text style={styles.contextText}>Network Operation East 3 - Asset Check</Text>
-          <Text style={styles.greeting}>Hi, {userName}</Text>
-          <View style={styles.locationLine}>
-            <MaterialIcons name="location-on" size={16} color={palette.textMuted} />
-            <Text style={styles.locationText}>
-              {userBranch} - {profitCenter}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.assetTypePanel}>
-          <Text style={styles.sectionTitle}>Asset Types</Text>
-          <View style={styles.divider} />
-          <View style={styles.assetTypeRow}>
-            {(Object.keys(assetTypeData) as AssetType[]).map((type) => {
-              const item = assetTypeData[type];
-              const isSelected = selectedType === type;
-
-              return (
-                <Pressable
-                  accessibilityLabel={`Filter asset type ${type}`}
-                  accessibilityRole="button"
-                  key={type}
-                  onPress={() => {
-                    setSelectedType(type);
-                    setSelectedSubCategory(null);
-                  }}
-                  style={({ pressed }) => [
-                    styles.assetTypeCard,
-                    isSelected && styles.assetTypeCardSelected,
-                    pressed && styles.pressed,
-                  ]}>
-                  <AssetTypeBorderGlow active={isSelected} />
-                  <MaterialIcons name={item.icon} size={27} color={isSelected ? palette.surface : palette.primary} />
-                  <Text style={[styles.assetTypeLabel, isSelected && styles.assetTypeLabelSelected]}>{type}</Text>
-                  <Text style={[styles.assetTypeValue, isSelected && styles.assetTypeValueSelected]}>{item.total}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-
-        {visibleSubCategories.length > 0 ? (
-          <View style={styles.subCategoryRow}>
-            {visibleSubCategories.map((item) => {
-              const isSelected = selectedSubCategory === item.label;
-
-              return (
-                <Pressable
-                  accessibilityLabel={`Filter sub category ${item.label}`}
-                  accessibilityRole="button"
-                  key={item.label}
-                  onPress={() => setSelectedSubCategory((current) => (current === item.label ? null : item.label))}
-                  style={({ pressed }) => [
-                    styles.subCategoryCard,
-                    isSelected && styles.subCategoryCardSelected,
-                    pressed && styles.pressed,
-                  ]}>
-                  <MaterialIcons name={item.icon} size={20} color={isSelected ? palette.primaryDark : palette.primary} />
-                  <Text style={[styles.subCategoryLabel, isSelected && styles.subCategoryLabelSelected]}>{item.label}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        ) : null}
-
-        <View style={styles.summaryGrid}>
-          <SummaryPanel title="Inspection" rows={inspectionRows} />
-          <SummaryPanel title="Condition" rows={conditionRows} />
-        </View>
-      </View>
-
-      <View style={styles.assetListCard}>
-        <View style={styles.assetListHeader}>
-          <Text style={styles.sectionTitle}>List Asset</Text>
-          <Text style={styles.assetListMeta}>{filteredAssets.length} records</Text>
-        </View>
-        <View style={styles.tableToolbar}>
-          <Text style={styles.showDataLabel}>Show Data</Text>
-          <View style={styles.showDataOptions}>
-            {pageSizeOptions.map((option) => {
-              const isSelected = pageSize === option;
-
-              return (
-                <Pressable
-                  accessibilityRole="button"
-                  key={option}
-                  onPress={() => setPageSize(option)}
-                  style={({ pressed }) => [
-                    styles.showDataButton,
-                    isSelected && styles.showDataButtonSelected,
-                    pressed && styles.pressed,
-                  ]}>
-                  <Text style={[styles.showDataButtonText, isSelected && styles.showDataButtonTextSelected]}>
-                    {option}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.tableScroll}
-          contentContainerStyle={styles.tableScrollContent}>
-          <View style={[styles.tableContent, selectedType === 'Laptop' && styles.tableContentLaptop]}>
-            <View style={styles.tableHeader}>
-              <Text style={[styles.tableHeaderText, styles.codeColumn]}>
-                {selectedType === 'Vehicle' ? 'Nomor Polisi' : 'Asset Code'}
-              </Text>
-              <Text style={[styles.tableHeaderText, styles.nameColumn]}>Asset Name</Text>
-              <Text style={[styles.tableHeaderText, styles.lastCheckColumn]}>Last Check</Text>
-              {selectedType === 'Laptop' ? (
-                <Text style={[styles.tableHeaderText, styles.picColumn]}>PIC Laptop</Text>
-              ) : null}
-              <Text style={[styles.tableHeaderText, styles.statusHeaderColumn]}>Status</Text>
+    <AppScreen scroll={false}>
+      <ScrollView contentContainerStyle={styles.homeContent} showsVerticalScrollIndicator={false}>
+        <View style={styles.heroSection}>
+            <View style={styles.header}>
+              <Text style={styles.contextText}>Network Operation East 3 - Asset Check</Text>
+              <Text style={styles.greeting}>Hi, {userName}</Text>
+              <View style={styles.locationLine}>
+                <MaterialIcons name="location-on" size={16} color={palette.textMuted} />
+                <Text style={styles.locationText}>
+                  {userBranch} - {profitCenter}
+                </Text>
+              </View>
             </View>
-            <View style={styles.tableRows}>
-              {paginatedAssets.map((asset) => (
-                <View key={asset.code} style={styles.tableRow}>
-                  <Text numberOfLines={1} style={[styles.assetCode, styles.codeColumn]}>
-                    {asset.code}
+
+            <View style={styles.assetTypePanel}>
+              <Text style={styles.sectionTitle}>Asset Types</Text>
+              <View style={styles.divider} />
+              <View style={styles.assetTypeRow}>
+                {(Object.keys(assetTypeData) as AssetType[]).map((type) => {
+                  const item = assetTypeData[type];
+                  const isSelected = selectedType === type;
+
+                  return (
+                    <Pressable
+                      accessibilityLabel={`Filter asset type ${type}`}
+                      accessibilityRole="button"
+                      key={type}
+                      onPress={() => {
+                        setSelectedType(type);
+                        setSelectedSubCategory(null);
+                      }}
+                      style={({ pressed }) => [
+                        styles.assetTypeCard,
+                        isSelected && styles.assetTypeCardSelected,
+                        pressed && styles.pressed,
+                      ]}>
+                      <AssetTypeBorderGlow active={isSelected} />
+                    <MaterialIcons name={item.icon} size={23} color={isSelected ? palette.surface : palette.primary} />
+                      <Text style={[styles.assetTypeLabel, isSelected && styles.assetTypeLabelSelected]}>{type}</Text>
+                      <Text style={[styles.assetTypeValue, isSelected && styles.assetTypeValueSelected]}>{item.total}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            {visibleSubCategories.length > 0 ? (
+              <View style={styles.subCategoryRow}>
+                {visibleSubCategories.map((item) => {
+                  const isSelected = selectedSubCategory === item.label;
+
+                  return (
+                    <Pressable
+                      accessibilityLabel={`Filter sub category ${item.label}`}
+                      accessibilityRole="button"
+                      key={item.label}
+                      onPress={() => setSelectedSubCategory((current) => (current === item.label ? null : item.label))}
+                      style={({ pressed }) => [
+                        styles.subCategoryCard,
+                        isSelected && styles.subCategoryCardSelected,
+                        pressed && styles.pressed,
+                      ]}>
+                      <MaterialIcons name={item.icon} size={20} color={isSelected ? palette.primaryDark : palette.primary} />
+                      <Text style={[styles.subCategoryLabel, isSelected && styles.subCategoryLabelSelected]}>{item.label}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            ) : null}
+
+            <View style={styles.summaryGrid}>
+              <SummaryPanel title="Inspection" rows={inspectionRows} />
+              <SummaryPanel title="Condition" rows={conditionRows} />
+            </View>
+          </View>
+
+          <View style={styles.assetListCard}>
+            <View style={styles.assetListHeader}>
+              <Text style={styles.sectionTitle}>List Asset</Text>
+              <Text style={styles.assetListMeta}>{filteredAssets.length} records</Text>
+            </View>
+            <View style={styles.tableToolbar}>
+              <Text style={styles.showDataLabel}>Show Data</Text>
+              <View style={styles.showDataOptions}>
+                {pageSizeOptions.map((option) => {
+                  const isSelected = pageSize === option;
+
+                  return (
+                    <Pressable
+                      accessibilityRole="button"
+                      key={option}
+                      onPress={() => setPageSize(option)}
+                      style={({ pressed }) => [
+                        styles.showDataButton,
+                        isSelected && styles.showDataButtonSelected,
+                        pressed && styles.pressed,
+                      ]}>
+                      <Text style={[styles.showDataButtonText, isSelected && styles.showDataButtonTextSelected]}>
+                        {option}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.tableScroll}
+              contentContainerStyle={styles.tableScrollContent}>
+              <View style={[styles.tableContent, selectedType === 'Laptop' && styles.tableContentLaptop]}>
+                <View style={styles.tableHeader}>
+                  <Text style={[styles.tableHeaderText, styles.codeColumn]}>
+                    {selectedType === 'Vehicle' ? 'Nomor Polisi' : 'Asset Code'}
                   </Text>
-                  <Text numberOfLines={2} style={[styles.assetName, styles.nameColumn]}>
-                    {asset.name}
-                  </Text>
-                  <Text numberOfLines={2} style={[styles.lastCheckText, styles.lastCheckColumn]}>
-                    {asset.lastCheck}
-                  </Text>
+                  <Text style={[styles.tableHeaderText, styles.nameColumn]}>Asset Name</Text>
+                  <Text style={[styles.tableHeaderText, styles.lastCheckColumn]}>Last Check</Text>
                   {selectedType === 'Laptop' ? (
-                    <Text numberOfLines={2} style={[styles.picText, styles.picColumn]}>
-                      {asset.picLaptop ?? '-'}
-                    </Text>
+                    <Text style={[styles.tableHeaderText, styles.picColumn]}>PIC Laptop</Text>
                   ) : null}
-                  <View style={styles.statusColumn}>
-                    <StatusPill label={asset.status} />
-                  </View>
+                  <Text style={[styles.tableHeaderText, styles.statusHeaderColumn]}>Status</Text>
                 </View>
-              ))}
+                <View style={styles.tableRows}>
+                  {paginatedAssets.map((asset) => (
+                    <View key={asset.code} style={styles.tableRow}>
+                      <Text numberOfLines={1} style={[styles.assetCode, styles.codeColumn]}>
+                        {asset.code}
+                      </Text>
+                      <Text numberOfLines={2} style={[styles.assetName, styles.nameColumn]}>
+                        {asset.name}
+                      </Text>
+                      <Text numberOfLines={2} style={[styles.lastCheckText, styles.lastCheckColumn]}>
+                        {asset.lastCheck}
+                      </Text>
+                      {selectedType === 'Laptop' ? (
+                        <Text numberOfLines={2} style={[styles.picText, styles.picColumn]}>
+                          {asset.picLaptop ?? '-'}
+                        </Text>
+                      ) : null}
+                      <View style={styles.statusColumn}>
+                        <StatusPill label={asset.status} />
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            </ScrollView>
+            <View style={styles.paginationRow}>
+              <Pressable
+                accessibilityRole="button"
+                disabled={!canGoPrevious}
+                onPress={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                style={({ pressed }) => [
+                  styles.paginationButton,
+                  !canGoPrevious && styles.paginationButtonDisabled,
+                  pressed && canGoPrevious && styles.pressed,
+                ]}>
+                <Text style={[styles.paginationButtonText, !canGoPrevious && styles.paginationButtonTextDisabled]}>
+                  Previous
+                </Text>
+              </Pressable>
+              <Text style={styles.pageIndicator}>
+                Page {currentPage} / {totalPages}
+              </Text>
+              <Pressable
+                accessibilityRole="button"
+                disabled={!canGoNext}
+                onPress={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                style={({ pressed }) => [
+                  styles.paginationButton,
+                  !canGoNext && styles.paginationButtonDisabled,
+                  pressed && canGoNext && styles.pressed,
+                ]}>
+                <Text style={[styles.paginationButtonText, !canGoNext && styles.paginationButtonTextDisabled]}>
+                  Next
+                </Text>
+              </Pressable>
             </View>
           </View>
         </ScrollView>
-        <View style={styles.paginationRow}>
-          <Pressable
-            accessibilityRole="button"
-            disabled={!canGoPrevious}
-            onPress={() => setCurrentPage((page) => Math.max(1, page - 1))}
-            style={({ pressed }) => [
-              styles.paginationButton,
-              !canGoPrevious && styles.paginationButtonDisabled,
-              pressed && canGoPrevious && styles.pressed,
-            ]}>
-            <Text style={[styles.paginationButtonText, !canGoPrevious && styles.paginationButtonTextDisabled]}>
-              Previous
-            </Text>
-          </Pressable>
-          <Text style={styles.pageIndicator}>
-            Page {currentPage} / {totalPages}
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            disabled={!canGoNext}
-            onPress={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
-            style={({ pressed }) => [
-              styles.paginationButton,
-              !canGoNext && styles.paginationButtonDisabled,
-              pressed && canGoNext && styles.pressed,
-            ]}>
-            <Text style={[styles.paginationButtonText, !canGoNext && styles.paginationButtonTextDisabled]}>
-              Next
-            </Text>
-          </Pressable>
-        </View>
-      </View>
     </AppScreen>
-  );
-}
-
-function SectionBackground() {
-  return (
-    <View pointerEvents="none" style={styles.sectionBackground}>
-      <View style={styles.sectionBase} />
-      <View style={styles.sectionMintWashTop} />
-      <View style={styles.sectionMintWashBottom} />
-      <View style={styles.sectionDiagonalLarge} />
-      <View style={styles.sectionDiagonalSmall} />
-      <View style={[styles.sectionCircuitLine, styles.sectionCircuitLineOne]} />
-      <View style={[styles.sectionCircuitLine, styles.sectionCircuitLineTwo]} />
-      <View style={[styles.sectionCircuitLine, styles.sectionCircuitLineThree]} />
-      <View style={[styles.sectionCircuitDot, styles.sectionCircuitDotOne]} />
-      <View style={[styles.sectionCircuitDot, styles.sectionCircuitDotTwo]} />
-      <View style={styles.sectionHudRing} />
-      <View style={styles.sectionDotMatrix} />
-    </View>
   );
 }
 
@@ -418,11 +403,15 @@ function AssetTypeBorderGlow({ active }: { active: boolean }) {
   const [layout, setLayout] = useState({ height: 0, width: 0 });
 
   useEffect(() => {
+    if (!active) {
+      return undefined;
+    }
+
     progress.setValue(0);
 
     const animation = Animated.loop(
       Animated.timing(progress, {
-        duration: active ? 2400 : 3600,
+        duration: 2400,
         easing: Easing.linear,
         toValue: 1,
         useNativeDriver: true,
@@ -433,6 +422,10 @@ function AssetTypeBorderGlow({ active }: { active: boolean }) {
 
     return () => animation.stop();
   }, [active, progress]);
+
+  if (!active) {
+    return null;
+  }
 
   const width = layout.width;
   const height = layout.height;
@@ -567,7 +560,7 @@ function SummaryPanel({
       <View style={styles.summaryRows}>
         {rows.map((row) => (
           <View key={row.label} style={styles.summaryRow}>
-            <MaterialIcons name={row.icon} size={18} color={row.color} />
+            <MaterialIcons name={row.icon} size={13} color={row.color} />
             <Text style={[styles.summaryLabel, { color: row.color }]}>{row.label}</Text>
             <Text style={styles.summaryValue}>{row.value}</Text>
           </View>
@@ -578,16 +571,11 @@ function SummaryPanel({
 }
 
 function StatusPill({ label }: { label: string }) {
-  const tone =
-    label === 'Checked'
-      ? { border: '#9ADBC4', text: palette.primary }
-      : label === 'Pending'
-        ? { border: '#FFD58D', text: palette.warning }
-        : { border: '#F7A7A1', text: palette.danger };
+  const tone = getStatusTone(label);
 
   return (
-    <View style={[styles.statusPill, { borderColor: tone.border }]}>
-      <Text style={[styles.statusPillText, { color: tone.text }]}>{label}</Text>
+    <View style={[styles.statusPill, { borderColor: tone.borderColor }]}>
+      <Text style={[styles.statusPillText, { color: tone.color }]}>{label}</Text>
     </View>
   );
 }
@@ -631,11 +619,11 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1,
     flex: 1,
-    gap: 3,
-    minHeight: 88,
+    gap: 2,
+    minHeight: 72,
     overflow: 'hidden',
     paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.xs,
+    paddingVertical: 6,
     position: 'relative',
   },
   assetTypeCardSelected: {
@@ -665,9 +653,9 @@ const styles = StyleSheet.create({
     width: 2,
   },
   assetTypeLabel: {
-    ...typography.bodyMd,
+    ...typography.labelSm,
     color: palette.textMuted,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   assetTypeLabelSelected: {
     color: '#D1FAE5',
@@ -678,8 +666,8 @@ const styles = StyleSheet.create({
     borderColor: '#D1DAD5',
     borderRadius: radius.lg,
     borderWidth: 1,
-    gap: spacing.xs,
-    padding: spacing.sm,
+    gap: 6,
+    padding: spacing.xs,
     shadowOpacity: 0.04,
     shadowRadius: 9,
   },
@@ -689,9 +677,9 @@ const styles = StyleSheet.create({
   },
   assetTypeValue: {
     color: palette.text,
-    fontSize: 19,
+    fontSize: 17,
     fontWeight: '900',
-    lineHeight: 23,
+    lineHeight: 20,
   },
   assetTypeValueSelected: {
     color: palette.surface,
@@ -727,12 +715,17 @@ const styles = StyleSheet.create({
   header: {
     gap: 1,
   },
+  homeContent: {
+    flexGrow: 1,
+    gap: spacing.sm,
+    paddingBottom: 0,
+  },
   heroSection: {
-    gap: spacing.md,
+    gap: spacing.sm,
     marginHorizontal: -spacing.md,
     marginTop: -spacing.md,
     overflow: 'hidden',
-    paddingBottom: spacing.md,
+    paddingBottom: 0,
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
     position: 'relative',
@@ -938,9 +931,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 5,
     justifyContent: 'center',
-    minHeight: 34,
+    minHeight: 32,
     paddingHorizontal: 6,
-    paddingVertical: 5,
+    paddingVertical: 4,
   },
   subCategoryCardSelected: {
     backgroundColor: palette.primarySoft,
@@ -974,7 +967,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 0,
     flex: 1,
-    gap: 6,
+    gap: 4,
     paddingHorizontal: 2,
     paddingVertical: spacing.xs,
   },
@@ -985,7 +978,7 @@ const styles = StyleSheet.create({
     minHeight: 22,
   },
   summaryRows: {
-    gap: 4,
+    gap: 2,
   },
   summaryValue: {
     color: palette.text,

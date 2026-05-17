@@ -1,7 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
-import { router } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -52,6 +52,16 @@ export default function ScanScreen() {
   const lastWarningAtRef = useRef(0);
   const helperWarningIndexRef = useRef(0);
   const warningTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      scanLockedRef.current = false;
+      lastDetectionAtRef.current = Date.now();
+      setScanned(false);
+      setWarning(null);
+      setMessage(permission?.granted ? 'Align the barcode inside the frame.' : 'Opening camera...');
+    }, [permission?.granted]),
+  );
 
   useEffect(() => {
     if (!permission) {
@@ -236,6 +246,7 @@ function normalizeBarcode(value: string) {
 function isExpectedAssetBarcodeFormat(value: string) {
   return (
     /^ASSET-\d{3}$/.test(value) ||
+    /^NOE3-(TOOLS|WFM|VEH|LAP)-[A-Z]{3}-\d{4}$/.test(value) ||
     /^AST-[A-Z]{3}-\d{4}$/.test(value) ||
     /^LTP-[A-Z]{2,4}-\d{4}$/.test(value) ||
     /^WFM-[A-Z]{3}-\d{4}$/.test(value) ||

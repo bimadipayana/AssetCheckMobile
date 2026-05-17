@@ -127,7 +127,12 @@ export default function PhotoUploadScreen() {
       <Pressable
         accessibilityRole="button"
         disabled={!allPhotosCompleted}
-        onPress={() => router.push({ pathname: '/inspection-form', params: assetId ? { assetId } : undefined })}
+        onPress={() =>
+          router.push({
+            pathname: '/inspection-form',
+            params: assetId ? { assetId, photoComplete: 'true' } : { photoComplete: 'true' },
+          })
+        }
         style={({ pressed }) => [
           styles.continueButton,
           !allPhotosCompleted && styles.continueButtonDisabled,

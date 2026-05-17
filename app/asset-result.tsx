@@ -27,7 +27,7 @@ export default function AssetResultScreen() {
           </View>
           <Text style={styles.resultTitle}>Asset Identified</Text>
           <Text style={styles.resultSubtitle}>
-            {asset.category} - {asset.name}
+            {asset.category} - {asset.assetType} - {asset.name}
           </Text>
         </View>
 
@@ -50,8 +50,13 @@ export default function AssetResultScreen() {
           />
           <DetailRow
             icon="category"
-            label="Category Inspection"
+            label="Asset Category"
             value={asset.category}
+          />
+          <DetailRow
+            icon="precision-manufacturing"
+            label="Asset Type"
+            value={asset.assetType}
           />
           <DetailRow
             icon="event-available"

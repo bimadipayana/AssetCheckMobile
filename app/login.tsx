@@ -10,6 +10,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -30,6 +31,7 @@ const commonPasswords = [
 const LOGIN_VALIDATION_ENABLED = false;
 
 export default function LoginScreen() {
+  const { height, width } = useWindowDimensions();
   const scrollRef = useRef<ScrollView>(null);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -43,6 +45,8 @@ export default function LoginScreen() {
     [password, username],
   );
   const canSignIn = !usernameError && !passwordError;
+  const heroHeight = Math.min(width * 1.02, height * 0.46, 398);
+  const formFocusY = Math.max(heroHeight - height * 0.12, 0);
 
   const handleSignIn = () => {
     setSubmitted(true);
@@ -54,11 +58,15 @@ export default function LoginScreen() {
     router.replace('/');
   };
 
-  const handlePasswordFocus = () => {
-    setPasswordFocused(true);
+  const focusLoginForm = (field: 'username' | 'password') => {
+    setUsernameFocused(field === 'username');
+    setPasswordFocused(field === 'password');
 
     setTimeout(() => {
-      scrollRef.current?.scrollTo({ animated: true, y: 180 });
+      scrollRef.current?.scrollTo({
+        animated: true,
+        y: field === 'password' ? formFocusY + 48 : formFocusY,
+      });
     }, 120);
   };
 
@@ -74,20 +82,13 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
           <View style={[styles.mainContent, (usernameFocused || passwordFocused) && styles.mainContentFocused]}>
-            <View style={styles.brand}>
-              <View style={styles.logoStage}>
-                <Image
-                  accessibilityIgnoresInvertColors
-                  resizeMode="contain"
-                  source={require('@/assets/images/network-operation-east-3-logo.png')}
-                  style={styles.logoImage}
-                />
-              </View>
-              <Text style={styles.title}>Network Operation East 3</Text>
-              <View style={styles.subtitlePill}>
-                <MaterialIcons name="check-circle" size={14} color={palette.secondary} />
-                <Text style={styles.subtitle}>Operational Asset Verification</Text>
-              </View>
+            <View style={[styles.hero, { height: heroHeight }]}>
+              <Image
+                accessibilityIgnoresInvertColors
+                resizeMode="cover"
+                source={require('@/assets/images/login-hero.png')}
+                style={styles.heroImage}
+              />
             </View>
 
             <View style={styles.form}>
@@ -100,7 +101,7 @@ export default function LoginScreen() {
                     autoCorrect={false}
                     onBlur={() => setUsernameFocused(false)}
                     onChangeText={(value) => setUsername(value.trim().toLowerCase())}
-                    onFocus={() => setUsernameFocused(true)}
+                    onFocus={() => focusLoginForm('username')}
                     placeholder="username"
                     placeholderTextColor="#B8BCC9"
                     style={styles.input}
@@ -124,7 +125,7 @@ export default function LoginScreen() {
                     autoCapitalize="none"
                     onBlur={() => setPasswordFocused(false)}
                     onChangeText={setPassword}
-                    onFocus={handlePasswordFocus}
+                    onFocus={() => focusLoginForm('password')}
                     placeholder="Password"
                     placeholderTextColor="#B8BCC9"
                     secureTextEntry
@@ -213,15 +214,11 @@ function getPasswordError(value: string, username: string) {
 }
 
 const styles = StyleSheet.create({
-  brand: {
-    alignItems: 'center',
-    gap: 8,
-  },
   container: {
     flexGrow: 1,
-    paddingBottom: 18,
+    paddingBottom: 16,
     paddingHorizontal: 18,
-    paddingTop: 18,
+    paddingTop: 0,
   },
   errorText: {
     ...typography.labelSm,
@@ -236,12 +233,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   form: {
-    backgroundColor: 'rgba(255, 255, 255, 0.82)',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     borderColor: '#D7E5DE',
     borderRadius: 16,
     borderWidth: 1,
     gap: 14,
-    marginTop: 22,
+    marginTop: -36,
     padding: 14,
     shadowColor: '#064E3B',
     shadowOffset: { width: 0, height: 12 },
@@ -327,22 +324,23 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     fontWeight: '900',
   },
-  logoImage: {
-    height: 236,
-    width: 236,
+  hero: {
+    alignSelf: 'stretch',
+    marginHorizontal: -18,
+    overflow: 'hidden',
   },
-  logoStage: {
-    alignItems: 'center',
-    marginBottom: 0,
+  heroImage: {
+    height: '100%',
+    width: '100%',
   },
   mainContent: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     paddingBottom: 24,
   },
   mainContentFocused: {
     justifyContent: 'flex-start',
-    paddingTop: 54,
+    paddingTop: 0,
   },
   pressed: {
     opacity: 0.86,
@@ -376,28 +374,6 @@ const styles = StyleSheet.create({
     ...typography.bodyLg,
     color: '#FFFFFF',
     fontWeight: '800',
-    textAlign: 'center',
-  },
-  subtitle: {
-    ...typography.labelSm,
-    color: palette.secondary,
-    fontWeight: '900',
-    textAlign: 'center',
-  },
-  subtitlePill: {
-    alignItems: 'center',
-    borderRadius: 999,
-    flexDirection: 'row',
-    gap: 5,
-    paddingHorizontal: 0,
-    paddingVertical: 0,
-  },
-  title: {
-    color: palette.primary,
-    fontSize: 23,
-    fontWeight: '900',
-    lineHeight: 29,
-    maxWidth: 330,
     textAlign: 'center',
   },
 });

@@ -1,8 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import * as Location from 'expo-location';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Alert, InteractionManager, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Alert, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen } from '@/components/app-screen';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -28,69 +27,17 @@ const gallery = [
   { id: 'damage', title: 'Damage Area', caption: 'Minor crack documentation', icon: 'report-problem' },
 ] as const;
 
-type DetectedLocation = {
-  address: string;
-  coordinates: string;
-  latitude: number;
-  longitude: number;
-};
-
 export default function InspectionDetailScreen() {
   const { assetId, returnTo } = useLocalSearchParams<{ assetId?: string; returnTo?: string }>();
   const asset = assets.find((item) => item.id === assetId) ?? assets[4] ?? assets[0];
   const [previewPhoto, setPreviewPhoto] = useState<(typeof gallery)[number] | null>(null);
-  const [detectedLocation, setDetectedLocation] = useState<DetectedLocation | null>(null);
-  const [locationStatus, setLocationStatus] = useState<'loading' | 'ready' | 'denied' | 'error'>('loading');
+  const locationStatus = 'ready';
   const shouldShowHomeShortcut = returnTo === 'home';
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const detectLocation = async () => {
-      try {
-        setLocationStatus('loading');
-        const permission = await Location.requestForegroundPermissionsAsync();
-
-        if (permission.status !== Location.PermissionStatus.GRANTED) {
-          if (isMounted) {
-            setLocationStatus('denied');
-          }
-          return;
-        }
-
-        const position = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
-        });
-        const { latitude, longitude } = position.coords;
-        const addressResult = await Location.reverseGeocodeAsync({ latitude, longitude });
-
-        if (isMounted) {
-          setDetectedLocation({
-            address: formatAddress(addressResult[0]),
-            coordinates: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
-            latitude,
-            longitude,
-          });
-          setLocationStatus('ready');
-        }
-      } catch {
-        if (isMounted) {
-          setLocationStatus('error');
-        }
-      }
-    };
-
-    const task = InteractionManager.runAfterInteractions(() => {
-      void detectLocation();
-    });
-
-    return () => {
-      isMounted = false;
-      task.cancel();
-    };
-  }, []);
-
-  const displayedLocation = detectedLocation ?? lastLocation;
+  const displayedLocation = {
+    ...lastLocation,
+    address: asset.defaultLocation,
+  };
   const googleMapsUrl = getGoogleMapsUrl(displayedLocation.latitude, displayedLocation.longitude);
   const handleShareReport = () => {
     Alert.alert('Share Report', 'Inspection report is ready to share.');
@@ -162,7 +109,7 @@ export default function InspectionDetailScreen() {
           <View style={styles.assetCopy}>
             <Text style={styles.assetCode}>{asset.code}</Text>
             <Text style={styles.assetName}>{asset.name}</Text>
-            <Text style={styles.assetMeta}>{asset.category} - SN {asset.serialNumber}</Text>
+          <Text style={styles.assetMeta}>{asset.category} - {asset.assetType} - SN {asset.serialNumber}</Text>
             <Text style={styles.assetBranch}>{asset.branch}</Text>
           </View>
         </View>
@@ -311,23 +258,6 @@ function PhotoPreviewModal({
   );
 }
 
-function formatAddress(address?: Location.LocationGeocodedAddress) {
-  if (!address) {
-    return 'Detected location';
-  }
-
-  return [
-    address.name,
-    address.street,
-    address.district,
-    address.city,
-    address.region,
-    address.postalCode,
-  ]
-    .filter(Boolean)
-    .join(', ') || 'Detected location';
-}
-
 function getGoogleMapsUrl(latitude: number, longitude: number) {
   return `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
 }
@@ -385,7 +315,7 @@ function getLocationMessage(status: 'loading' | 'ready' | 'denied' | 'error') {
     return 'Unable to detect current GPS. Showing saved inspection location.';
   }
 
-  return 'Location synchronized from device GPS.';
+  return 'Showing saved inspection location.';
 }
 
 const styles = StyleSheet.create({

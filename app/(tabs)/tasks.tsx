@@ -8,6 +8,7 @@ import {
   InlineStatusBadge,
   getReportSubmissionStatus,
 } from '@/components/ui/inspection-status';
+import { getAssetIcon } from '@/constants/asset-icons';
 import { getProgressColor } from '@/constants/progress';
 import { assets, branchSummary } from '@/data/mock';
 import { palette, spacing, typography } from '@/constants/theme';
@@ -92,7 +93,7 @@ export default function TasksScreen() {
         <View style={styles.list}>
           {visibleAssets.map((asset) => {
             const action = getAssetAction(asset.status);
-            const categoryIcon = getCategoryIcon(asset.category);
+            const categoryIcon = getAssetIcon(asset.category);
             const reportStatus = getReportSubmissionStatus(asset.condition);
             const primaryStatus = asset.condition === 'Unknown' ? asset.status : asset.condition;
             const showActionButton = action.variant === 'scan' || reportStatus === 'Not Submitted';
@@ -112,7 +113,7 @@ export default function TasksScreen() {
                         <InlineStatusBadge compact label={primaryStatus} />
                       </View>
                     </View>
-                    <Text style={styles.assetCategory}>{asset.category}</Text>
+                    <Text style={styles.assetCategory}>{asset.category} - {asset.assetType}</Text>
                     <View style={styles.metaGrid}>
                       <View style={styles.metaItem}>
                         <MaterialIcons name="tag" size={15} color={palette.textSubtle} />
@@ -200,38 +201,6 @@ function getAssetAction(status: string): {
     label: 'Scan Asset',
     variant: 'scan',
   };
-}
-
-function getCategoryIcon(category: string): keyof typeof MaterialIcons.glyphMap {
-  if (category.includes('OTDR')) {
-    return 'cable';
-  }
-
-  if (category.includes('Splicer')) {
-    return 'precision-manufacturing';
-  }
-
-  if (category.includes('Power')) {
-    return 'electrical-services';
-  }
-
-  if (category.includes('Grandmax')) {
-    return 'local-shipping';
-  }
-
-  if (category.includes('Motor')) {
-    return 'two-wheeler';
-  }
-
-  if (category.includes('Laptop')) {
-    return 'laptop-mac';
-  }
-
-  if (category.includes('WFM')) {
-    return 'support-agent';
-  }
-
-  return 'inventory-2';
 }
 
 const styles = StyleSheet.create({
@@ -373,7 +342,7 @@ const styles = StyleSheet.create({
   list: {
     gap: spacing.sm,
     marginTop: spacing.sm,
-    paddingBottom: spacing.md,
+    paddingBottom: 0,
   },
   locationLine: {
     alignItems: 'center',
@@ -449,13 +418,14 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     gap: 4,
-    paddingBottom: spacing.lg,
+    paddingBottom: 0,
   },
   stickyHeader: {
     backgroundColor: palette.background,
     elevation: 5,
     gap: 0,
     marginHorizontal: -spacing.md,
+    overflow: 'hidden',
     paddingBottom: 7,
     paddingHorizontal: spacing.md,
     paddingTop: 2,
